@@ -1,0 +1,7 @@
+# ビルドスクリプトの承認（pnpm v11+ の allowBuilds 形式）
+allowBuilds:
+  prisma: true
+  "@prisma/engines": true
+  better-sqlite3: true
+  sharp: false
+  unrs-resolver: false

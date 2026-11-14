@@ -1,0 +1,47 @@
+// シフト管理アプリ Prisma Schema（SQLite・ファイルDBで完全独立）
+
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// スタッフマスタ
+model Staff {
+  id           String   @id @default(uuid())
+  name         String
+  displayColor String   @default("#6B7280") @map("display_color")
+  sortOrder    Int      @default(0) @map("sort_order")
+  isActive     Boolean  @default(true) @map("is_active")
+  memo         String?
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  shifts Shift[]
+
+  @@map("staffs")
+  @@index([sortOrder])
+}
+
+// シフト（スタッフ×日で1行。時刻シフトまたは休みを表現）
+// date は "YYYY-MM-DD"、start/end は "HH:mm" の文字列で保持（TZ起因の日付ずれを構造的に回避）
+model Shift {
+  id        String   @id @default(uuid())
+  staffId   String   @map("staff_id")
+  date      String
+  startTime String?  @map("start_time")
+  endTime   String?  @map("end_time")
+  isDayOff  Boolean  @default(false) @map("is_day_off")
+  memo      String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  staff Staff @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  @@unique([staffId, date])
+  @@map("shifts")
+  @@index([date])
+}
