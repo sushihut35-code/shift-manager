@@ -33,12 +33,17 @@ export interface ShiftDTO {
   updatedAt: string;
 }
 
-// シフト upsert リクエストの値
+// 1つの時間帯（例: 11:00〜15:00）
+export interface ShiftSlot {
+  startTime: string;
+  endTime: string;
+}
+
+// シフト保存リクエストの値（その日その人の全シフトを置き換える）
 export interface ShiftUpsertData {
   staffId: string;
   date: string;
   isDayOff?: boolean;
-  startTime?: string;
-  endTime?: string;
+  slots?: ShiftSlot[]; // 時間帯シフトの配列（1〜2個。時刻順でなくてもよい）
   memo?: string;
 }

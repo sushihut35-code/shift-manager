@@ -1,4 +1,4 @@
-// シフト編集ダイアログ（なし/休み/シフトの3状態エディタ）
+// シフト編集ダイアログ（なし/休み/シフトの3状態。シフトは最大2時間帯）
 
 "use client";
 
@@ -17,7 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { WEEKDAY_LABELS, fromISO } from "@/lib/date";
 import { format } from "date-fns";
-import type { ShiftDTO, StaffDTO } from "@/types";
+import type { ShiftDTO, StaffDTO, ShiftSlot } from "@/types";
 
 // セルの編集状態
 type ShiftKind = "none" | "dayOff" | "shift";
@@ -27,23 +27,71 @@ interface ShiftDialogProps {
   onOpenChange: (open: boolean) => void;
   staff: StaffDTO | null;
   date: string | null;
-  shift?: ShiftDTO | null; // 既存シフト（無ければ null）
+  shifts?: ShiftDTO[] | null; // その日の既存シフト行（無ければ null）
   onSaved: () => void;
 }
 
-// 既存シフトから初期状態を得る
-const initialKind = (shift?: ShiftDTO | null): ShiftKind => {
-  if (!shift) return "none";
-  if (shift.isDayOff) return "dayOff";
+// 既存シフト行から初期状態を得る
+const initialKind = (shifts?: ShiftDTO[] | null): ShiftKind => {
+  if (!shifts || shifts.length === 0) return "none";
+  if (shifts.some((s) => s.isDayOff)) return "dayOff";
   return "shift";
 };
+
+// 1時間帯の開始・終了入力
+function SlotInputs({
+  label,
+  idPrefix,
+  startTime,
+  endTime,
+  onStartTimeChange,
+  onEndTimeChange,
+}: {
+  label: string;
+  idPrefix: string;
+  startTime: string;
+  endTime: string;
+  onStartTimeChange: (v: string) => void;
+  onEndTimeChange: (v: string) => void;
+}) {
+  return (
+    <div className="space-y-2">
+      <Label>{label}</Label>
+      <div className="flex items-end gap-2">
+        <div className="space-y-1 flex-1">
+          <Label htmlFor={`${idPrefix}-start`} className="text-xs text-gray-500">
+            開始
+          </Label>
+          <Input
+            id={`${idPrefix}-start`}
+            type="time"
+            value={startTime}
+            onChange={(e) => onStartTimeChange(e.target.value)}
+          />
+        </div>
+        <span className="pb-2 text-gray-400">〜</span>
+        <div className="space-y-1 flex-1">
+          <Label htmlFor={`${idPrefix}-end`} className="text-xs text-gray-500">
+            終了
+          </Label>
+          <Input
+            id={`${idPrefix}-end`}
+            type="time"
+            value={endTime}
+            onChange={(e) => onEndTimeChange(e.target.value)}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function ShiftDialog({
   open,
   onOpenChange,
   staff,
   date,
-  shift,
+  shifts,
   onSaved,
 }: ShiftDialogProps) {
   return (
@@ -54,7 +102,7 @@ export function ShiftDialog({
           key={`${staff.id}:${date}`}
           staff={staff}
           date={date}
-          shift={shift ?? null}
+          shifts={shifts ?? null}
           onOpenChange={onOpenChange}
           onSaved={onSaved}
         />
@@ -66,7 +114,7 @@ export function ShiftDialog({
 interface ShiftFormBodyProps {
   staff: StaffDTO;
   date: string;
-  shift: ShiftDTO | null;
+  shifts: ShiftDTO[] | null;
   onOpenChange: (open: boolean) => void;
   onSaved: () => void;
 }
@@ -75,34 +123,77 @@ interface ShiftFormBodyProps {
 function ShiftFormBody({
   staff,
   date,
-  shift,
+  shifts,
   onOpenChange,
   onSaved,
 }: ShiftFormBodyProps) {
-  const [kind, setKind] = useState<ShiftKind>(initialKind(shift));
-  const [startTime, setStartTime] = useState(shift?.startTime ?? "");
-  const [endTime, setEndTime] = useState(shift?.endTime ?? "");
-  const [memo, setMemo] = useState(shift?.memo ?? "");
+  // 既存の時間帯シフト（時刻順に並べ、1つ目/2つ目へ初期値として使う）
+  const existingSlots = (shifts ?? [])
+    .filter((s) => !s.isDayOff && s.startTime && s.endTime)
+    .sort((a, b) => (a.startTime! < b.startTime! ? -1 : 1));
+
+  const [kind, setKind] = useState<ShiftKind>(initialKind(shifts));
+  const [slot1Start, setSlot1Start] = useState(existingSlots[0]?.startTime ?? "");
+  const [slot1End, setSlot1End] = useState(existingSlots[0]?.endTime ?? "");
+  const [slot2Start, setSlot2Start] = useState(existingSlots[1]?.startTime ?? "");
+  const [slot2End, setSlot2End] = useState(existingSlots[1]?.endTime ?? "");
+  const [memo, setMemo] = useState(shifts?.[0]?.memo ?? "");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
   const dayNum = fromISO(date).getDay();
   const weekdayLabel = WEEKDAY_LABELS[dayNum === 0 ? 6 : dayNum - 1];
 
+  // 入力からスロット配列を組み立て（クライアント側検証つき）
+  const buildSlots = (): { slots?: ShiftSlot[]; error?: string } => {
+    if (!slot1Start || !slot1End) {
+      return { error: "1つ目の開始・終了時刻を入力してください" };
+    }
+    if (slot1Start >= slot1End) {
+      return {
+        error: "終了時刻は開始時刻より後になるように指定してください",
+      };
+    }
+    const slots: ShiftSlot[] = [
+      { startTime: slot1Start, endTime: slot1End },
+    ];
+    const slot2Filled = slot2Start !== "" || slot2End !== "";
+    if (slot2Filled) {
+      if (!slot2Start || !slot2End) {
+        return { error: "2つ目は開始・終了の両方を入力してください" };
+      }
+      if (slot2Start >= slot2End) {
+        return {
+          error: "2つ目も終了時刻は開始時刻より後にしてください",
+        };
+      }
+      // 時刻順に並べて重複チェック
+      const sorted = [
+        { startTime: slot1Start, endTime: slot1End },
+        { startTime: slot2Start, endTime: slot2End },
+      ].sort((a, b) => (a.startTime < b.startTime ? -1 : 1));
+      if (sorted[0].endTime > sorted[1].startTime) {
+        return { error: "2つの時間帯が重ならないようにしてください" };
+      }
+      slots.length = 0;
+      slots.push(...sorted);
+    }
+    return { slots };
+  };
+
   // 保存
   const handleSave = async () => {
     setError("");
 
     // クライアント側バリデーション（サーバーと同じ規則）
+    let slots: ShiftSlot[] | undefined;
     if (kind === "shift") {
-      if (!startTime || !endTime) {
-        setError("開始・終了時刻を入力してください");
+      const b = buildSlots();
+      if (b.error) {
+        setError(b.error);
         return;
       }
-      if (startTime >= endTime) {
-        setError("終了時刻は開始時刻より後になるように指定してください");
-        return;
-      }
+      slots = b.slots;
     }
     if (memo.trim().length > 200) {
       setError("メモは200文字以内で入力してください");
@@ -111,12 +202,13 @@ function ShiftFormBody({
 
     setSaving(true);
     try {
-      // なし＋既存行 → 削除
+      // なし → 全削除
       if (kind === "none") {
-        if (shift) {
-          const res = await fetch(`/api/shifts/${shift.id}`, {
-            method: "DELETE",
-          });
+        if (shifts && shifts.length > 0) {
+          const res = await fetch(
+            `/api/shifts?staffId=${staff.id}&date=${date}`,
+            { method: "DELETE" }
+          );
           if (!res.ok) {
             const data = await res.json().catch(() => null);
             setError(data?.error ?? "削除に失敗しました");
@@ -128,7 +220,7 @@ function ShiftFormBody({
         return;
       }
 
-      // 休み / シフト → upsert
+      // 休み / シフト → 全置き換え
       const res = await fetch("/api/shifts", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -136,8 +228,7 @@ function ShiftFormBody({
           staffId: staff.id,
           date,
           isDayOff: kind === "dayOff",
-          startTime: kind === "shift" ? startTime : undefined,
-          endTime: kind === "shift" ? endTime : undefined,
+          slots: kind === "shift" ? slots : undefined,
           memo: memo.trim() || undefined,
         }),
       });
@@ -189,28 +280,25 @@ function ShiftFormBody({
           ))}
         </div>
 
-        {/* シフト時のみ時刻入力 */}
+        {/* シフト時のみ時刻入力（最大2時間帯） */}
         {kind === "shift" && (
-          <div className="flex items-end gap-2">
-            <div className="space-y-2 flex-1">
-              <Label htmlFor="shift-start">開始</Label>
-              <Input
-                id="shift-start"
-                type="time"
-                value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
-              />
-            </div>
-            <span className="pb-2 text-gray-400">〜</span>
-            <div className="space-y-2 flex-1">
-              <Label htmlFor="shift-end">終了</Label>
-              <Input
-                id="shift-end"
-                type="time"
-                value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
-              />
-            </div>
+          <div className="space-y-3">
+            <SlotInputs
+              label="1つ目の時間帯"
+              idPrefix="slot1"
+              startTime={slot1Start}
+              endTime={slot1End}
+              onStartTimeChange={setSlot1Start}
+              onEndTimeChange={setSlot1End}
+            />
+            <SlotInputs
+              label="2つ目の時間帯（休憩を挟むなど・空欄で未使用）"
+              idPrefix="slot2"
+              startTime={slot2Start}
+              endTime={slot2End}
+              onStartTimeChange={setSlot2Start}
+              onEndTimeChange={setSlot2End}
+            />
           </div>
         )}
 

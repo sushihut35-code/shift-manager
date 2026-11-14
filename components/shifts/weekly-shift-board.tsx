@@ -39,14 +39,20 @@ export function WeeklyShiftBoard({
     setTodayISO(toISO(new Date()));
   }, []);
 
-  // staffId:date → shift の引き当て
-  const shiftMap = useMemo(
-    () =>
-      new Map(
-        currentShifts.map((s) => [`${s.staffId}:${s.date}`, s] as const)
-      ),
-    [currentShifts]
-  );
+  // staffId:date → その日のシフト行の配列
+  const shiftMap = useMemo(() => {
+    const map = new Map<string, ShiftDTO[]>();
+    for (const s of currentShifts) {
+      const key = `${s.staffId}:${s.date}`;
+      const list = map.get(key);
+      if (list) {
+        list.push(s);
+      } else {
+        map.set(key, [s]);
+      }
+    }
+    return map;
+  }, [currentShifts]);
 
   // 保存後に週のシフトを再取得
   const refreshShifts = async () => {
@@ -63,7 +69,7 @@ export function WeeklyShiftBoard({
   const editingStaff = editing
     ? staff.find((s) => s.id === editing.staffId) ?? null
     : null;
-  const editingShift = editing
+  const editingShifts = editing
     ? shiftMap.get(`${editing.staffId}:${editing.date}`) ?? null
     : null;
 
@@ -124,7 +130,7 @@ export function WeeklyShiftBoard({
                 {days.map((d) => (
                   <ShiftCell
                     key={d}
-                    shift={shiftMap.get(`${s.id}:${d}`)}
+                    shifts={shiftMap.get(`${s.id}:${d}`)}
                     staffColor={s.displayColor}
                     onClick={() => setEditing({ staffId: s.id, date: d })}
                   />
@@ -147,7 +153,7 @@ export function WeeklyShiftBoard({
         }}
         staff={editingStaff}
         date={editing?.date ?? null}
-        shift={editingShift}
+        shifts={editingShifts}
         onSaved={refreshShifts}
       />
     </div>

@@ -26,13 +26,13 @@ model Staff {
   @@index([sortOrder])
 }
 
-// シフト（スタッフ×日で1行。時刻シフトまたは休みを表現）
+// シフト（スタッフ×日で複数行可。1行=1時間帯、または休み行）
 // date は "YYYY-MM-DD"、start/end は "HH:mm" の文字列で保持（TZ起因の日付ずれを構造的に回避）
 model Shift {
   id        String   @id @default(uuid())
   staffId   String   @map("staff_id")
   date      String
-  startTime String?  @map("start_time")
+  startTime String?  @map("start_time") // 時間帯シフトでは必須・休み行では null
   endTime   String?  @map("end_time")
   isDayOff  Boolean  @default(false) @map("is_day_off")
   memo      String?
@@ -41,7 +41,7 @@ model Shift {
 
   staff Staff @relation(fields: [staffId], references: [id], onDelete: Cascade)
 
-  @@unique([staffId, date])
   @@map("shifts")
+  @@index([staffId, date])
   @@index([date])
 }
