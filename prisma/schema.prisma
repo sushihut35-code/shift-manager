@@ -1,4 +1,4 @@
-// シフト管理アプリ Prisma Schema（SQLite・ファイルDBで完全独立）
+// シフト管理アプリ Prisma Schema（Supabase PostgreSQL）
 
 generator client {
   provider = "prisma-client"
@@ -6,7 +6,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
 }
 
 // スタッフマスタ
@@ -31,9 +31,9 @@ model Staff {
 model Shift {
   id        String   @id @default(uuid())
   staffId   String   @map("staff_id")
-  date      String
-  startTime String?  @map("start_time") // 時間帯シフトでは必須・休み行では null
-  endTime   String?  @map("end_time")
+  date      String   @db.VarChar(10)
+  startTime String?  @map("start_time") @db.Char(5) // 時間帯シフトでは必須・休み行では null
+  endTime   String?  @map("end_time") @db.Char(5)
   isDayOff  Boolean  @default(false) @map("is_day_off")
   memo      String?
   createdAt DateTime @default(now()) @map("created_at")

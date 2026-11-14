@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: shift-manager
+    runtime: node
+    plan: free
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm prisma generate && pnpm build
+    startCommand: npx next start -H 0.0.0.0 -p $PORT
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: BASIC_AUTH_USER
+        sync: false
+      - key: BASIC_AUTH_PASSWORD
+        sync: false
+      - key: NODE_VERSION
+        value: "24"

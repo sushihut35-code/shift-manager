@@ -1,6 +1,6 @@
 // シードデータ作成スクリプト（スタッフ4名＋今週の見本シフト）
 
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../lib/generated/prisma/client";
 import { getWeekStart, getWeekDays } from "../lib/date";
 
@@ -11,8 +11,8 @@ try {
   // .env が無い場合は環境変数のみで動作
 }
 
-const adapter = new PrismaBetterSqlite3({
-  url: process.env.DATABASE_URL ?? "file:./prisma/dev.db",
+const adapter = new PrismaPg({
+  connectionString: process.env.DATABASE_URL,
 });
 const prisma = new PrismaClient({ adapter });
 
@@ -46,7 +46,7 @@ async function main() {
   // 今週（月曜始まり）の日付
   const days = getWeekDays(getWeekStart(new Date().toISOString().slice(0, 10)));
 
-  // 見本シフトを作成（時刻シフト・休み・メモ付きを混ぜて全セル状態を確認できるように）
+  // 見本シフトを作成（時刻シフト・休み・メモ付き・分割シフトを混ぜる）
   await prisma.shift.createMany({
     data: [
       // 田中太郎: 月〜金 10:00-19:00
@@ -68,9 +68,11 @@ async function main() {
       { staffId: ken.id, date: days[0], startTime: "09:00", endTime: "14:00", memo: "午前のみ" },
       { staffId: ken.id, date: days[2], startTime: "09:00", endTime: "14:00" },
       { staffId: ken.id, date: days[4], startTime: "09:00", endTime: "14:00" },
-      // 山田美月: 土日 12:00-18:00
-      { staffId: mitsuki.id, date: days[5], startTime: "12:00", endTime: "18:00" },
-      { staffId: mitsuki.id, date: days[6], startTime: "12:00", endTime: "18:00" },
+      // 山田美月: 土日 11:00-15:00 / 17:30-21:00（分割シフト）
+      ...[5, 6].flatMap((i) => [
+        { staffId: mitsuki.id, date: days[i], startTime: "11:00", endTime: "15:00" },
+        { staffId: mitsuki.id, date: days[i], startTime: "17:30", endTime: "21:00" },
+      ]),
     ],
   });
   console.log("今週の見本シフトを作成しました");
