@@ -2,7 +2,7 @@
 
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { WeekNavigator } from "@/components/shifts/week-navigator";
 import { ShiftCell } from "@/components/shifts/shift-cell";
 import { ShiftDialog } from "@/components/shifts/shift-dialog";
@@ -29,7 +29,15 @@ export function WeeklyShiftBoard({
 
   const days = useMemo(() => getWeekDays(weekStart), [weekStart]);
   const weekEnd = days[6];
-  const todayISO = toISO(new Date());
+
+  // 「今日」はhydration後にクライアント側で確定させる
+  // （SSR時点のサーバー日付とブラウザ日付が食い違うとhydrationエラーで
+  // 　全イベントが死ぬため、初回描画では強調しない）
+  const [todayISO, setTodayISO] = useState("");
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- SSRとブラウザの日付不一致によるhydration崩壊を防ぐ、クライアント側でのみ確定すべき値のため
+    setTodayISO(toISO(new Date()));
+  }, []);
 
   // staffId:date → shift の引き当て
   const shiftMap = useMemo(
