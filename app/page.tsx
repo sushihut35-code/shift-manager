@@ -1,31 +1,33 @@
-// 週次シフトボードページ（?week=YYYY-MM-DD で週を指定）
+// シフトページ（既定は月表示 / ?view=week&week=YYYY-MM-DD で週表示）
 
 import Link from "next/link";
 import { UserPlus } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { toStaffDto, toShiftDto } from "@/lib/dto";
-import { getWeekStart, addDaysISO } from "@/lib/date";
+import {
+  getWeekStart,
+  getMonthStart,
+  addDaysISO,
+  getMonthDays,
+} from "@/lib/date";
 import { WeeklyShiftBoard } from "@/components/shifts/weekly-shift-board";
+import { MonthlyShiftList } from "@/components/shifts/monthly-shift-list";
 
 export default async function HomePage({
   searchParams,
 }: {
-  searchParams: Promise<{ week?: string }>;
+  searchParams: Promise<{
+    view?: string;
+    month?: string;
+    week?: string;
+  }>;
 }) {
-  const { week } = await searchParams; // Next.js 16: Promise を await
-  const weekStart = getWeekStart(week ?? ""); // 無効・未指定は今週の月曜
-  const weekEnd = addDaysISO(weekStart, 6);
+  const { view = "month", month, week } = await searchParams; // Next.js 16: Promise を await
 
-  const [staff, shifts] = await Promise.all([
-    prisma.staff.findMany({
-      where: { isActive: true },
-      orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
-    }),
-    prisma.shift.findMany({
-      where: { date: { gte: weekStart, lte: weekEnd } },
-      orderBy: { date: "asc" },
-    }),
-  ]);
+  const staff = await prisma.staff.findMany({
+    where: { isActive: true },
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+  });
 
   // スタッフ未登録なら案内
   if (staff.length === 0) {
@@ -43,11 +45,37 @@ export default async function HomePage({
     );
   }
 
+  // 週表示（?view=week）
+  if (view === "week") {
+    const weekStart = getWeekStart(week ?? ""); // 無効・未指定は今週の月曜
+    const weekEnd = addDaysISO(weekStart, 6);
+    const shifts = await prisma.shift.findMany({
+      where: { date: { gte: weekStart, lte: weekEnd } },
+      orderBy: { date: "asc" },
+    });
+
+    return (
+      <WeeklyShiftBoard
+        staff={staff.map(toStaffDto)}
+        shifts={shifts.map(toShiftDto)}
+        weekStart={weekStart}
+      />
+    );
+  }
+
+  // 月表示（既定）
+  const monthStart = getMonthStart(month ?? week ?? ""); // 無効・未指定は今月
+  const monthEnd = getMonthDays(monthStart).at(-1)!;
+  const shifts = await prisma.shift.findMany({
+    where: { date: { gte: monthStart, lte: monthEnd } },
+    orderBy: [{ date: "asc" }, { startTime: "asc" }],
+  });
+
   return (
-    <WeeklyShiftBoard
+    <MonthlyShiftList
       staff={staff.map(toStaffDto)}
       shifts={shifts.map(toShiftDto)}
-      weekStart={weekStart}
+      monthStart={monthStart}
     />
   );
 }

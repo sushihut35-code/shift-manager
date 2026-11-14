@@ -2,10 +2,13 @@
 
 import {
   addDays,
+  addMonths,
   addWeeks,
+  endOfMonth,
   format,
   isValid,
   parseISO,
+  startOfMonth,
   startOfWeek,
 } from "date-fns";
 
@@ -46,3 +49,22 @@ export const addWeeksISO = (iso: string, n: number): string =>
 // 日を n 日ずらす（負値で過去へ）
 export const addDaysISO = (iso: string, n: number): string =>
   toISO(addDays(fromISO(iso), n));
+
+// 任意の日付文字列からその月の1日の "YYYY-MM-DD"（無効値は今月）
+export const getMonthStart = (iso: string): string =>
+  toISO(
+    startOfMonth(isISODate(iso) ? fromISO(iso) : new Date())
+  );
+
+// 月の1日〜末日までの "YYYY-MM-DD" 配列
+export const getMonthDays = (monthStartIso: string): string[] => {
+  const end = toISO(endOfMonth(fromISO(monthStartIso)));
+  const lastDay = Number(end.slice(8, 10));
+  return Array.from({ length: lastDay }, (_, i) =>
+    toISO(addDays(fromISO(monthStartIso), i))
+  );
+};
+
+// 月を n つずらす（負値で過去へ）
+export const addMonthsISO = (iso: string, n: number): string =>
+  toISO(addMonths(fromISO(iso), n));
