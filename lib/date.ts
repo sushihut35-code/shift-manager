@@ -4,12 +4,15 @@ import {
   addDays,
   addMonths,
   addWeeks,
+  addYears,
   endOfMonth,
+  endOfYear,
   format,
   isValid,
   parseISO,
   startOfMonth,
   startOfWeek,
+  startOfYear,
 } from "date-fns";
 
 // 曜日ラベル（月曜始まり）
@@ -68,3 +71,25 @@ export const getMonthDays = (monthStartIso: string): string[] => {
 // 月を n つずらす（負値で過去へ）
 export const addMonthsISO = (iso: string, n: number): string =>
   toISO(addMonths(fromISO(iso), n));
+
+// 任意の日付文字列からその年の1月1日（無効値は今年）
+export const getYearStart = (iso: string): string =>
+  toISO(startOfYear(isISODate(iso) ? fromISO(iso) : new Date()));
+
+// 年の1月1日〜12月31日までの配列（365/366日）
+export const getYearDays = (yearStartIso: string): string[] => {
+  const end = toISO(endOfYear(fromISO(yearStartIso)));
+  const lastDay = Number(end.slice(8, 10));
+  const total =
+    Math.round(
+      (fromISO(end).getTime() - fromISO(yearStartIso).getTime()) / 86400000
+    ) + 1;
+  void lastDay;
+  return Array.from({ length: total }, (_, i) =>
+    toISO(addDays(fromISO(yearStartIso), i))
+  );
+};
+
+// 年を n つずらす（負値で過去へ）
+export const addYearsISO = (iso: string, n: number): string =>
+  toISO(addYears(fromISO(iso), n));

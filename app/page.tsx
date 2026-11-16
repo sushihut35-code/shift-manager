@@ -1,4 +1,4 @@
-// シフトページ（既定は月表示 / ?view=week&week=YYYY-MM-DD で週表示）
+// シフトページ（既定は年表示 / ?view=week&week=YYYY-MM-DD で週表示）
 
 import Link from "next/link";
 import { UserPlus } from "lucide-react";
@@ -6,23 +6,24 @@ import { prisma } from "@/lib/prisma";
 import { toStaffDto, toShiftDto } from "@/lib/dto";
 import {
   getWeekStart,
-  getMonthStart,
+  getYearStart,
   addDaysISO,
-  getMonthDays,
+  getYearDays,
 } from "@/lib/date";
 import { WeeklyShiftBoard } from "@/components/shifts/weekly-shift-board";
-import { MonthlyShiftList } from "@/components/shifts/monthly-shift-list";
+import { YearlyShiftBoard } from "@/components/shifts/yearly-shift-board";
 
 export default async function HomePage({
   searchParams,
 }: {
   searchParams: Promise<{
     view?: string;
+    year?: string;
     month?: string;
     week?: string;
   }>;
 }) {
-  const { view = "month", month, week } = await searchParams; // Next.js 16: Promise を await
+  const { view = "year", year, month, week } = await searchParams; // Next.js 16: Promise を await
 
   const staff = await prisma.staff.findMany({
     where: { isActive: true },
@@ -63,19 +64,19 @@ export default async function HomePage({
     );
   }
 
-  // 月表示（既定）
-  const monthStart = getMonthStart(month ?? week ?? ""); // 無効・未指定は今月
-  const monthEnd = getMonthDays(monthStart).at(-1)!;
+  // 年表示（既定）: ?year=YYYY（month/week指定は年へ読み替え）
+  const yearStart = getYearStart(year ?? month ?? week ?? "");
+  const yearEnd = getYearDays(yearStart).at(-1)!;
   const shifts = await prisma.shift.findMany({
-    where: { date: { gte: monthStart, lte: monthEnd } },
+    where: { date: { gte: yearStart, lte: yearEnd } },
     orderBy: [{ date: "asc" }, { startTime: "asc" }],
   });
 
   return (
-    <MonthlyShiftList
+    <YearlyShiftBoard
       staff={staff.map(toStaffDto)}
       shifts={shifts.map(toShiftDto)}
-      monthStart={monthStart}
+      yearStart={yearStart}
     />
   );
 }

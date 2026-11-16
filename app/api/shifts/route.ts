@@ -26,9 +26,9 @@ export async function GET(request: NextRequest) {
         { status: 400 }
       );
     }
-    if ((new Date(end).getTime() - new Date(start).getTime()) / 86400000 > 62) {
+    if ((new Date(end).getTime() - new Date(start).getTime()) / 86400000 > 366) {
       return NextResponse.json(
-        { error: "期間は62日以内で指定してください" },
+        { error: "期間は366日以内で指定してください" },
         { status: 400 }
       );
     }
