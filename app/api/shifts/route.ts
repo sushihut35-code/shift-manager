@@ -3,7 +3,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { toShiftDto } from "@/lib/dto";
-import { isISODate, isHHmm } from "@/lib/date";
+import { isISODate, isHHmmStep30 } from "@/lib/date";
 import type { ShiftSlot } from "@/types";
 
 // GET /api/shifts?start=YYYY-MM-DD&end=YYYY-MM-DD - 期間内のシフト取得
@@ -68,12 +68,12 @@ const validateSlots = (raw: unknown): { slots?: ShiftSlot[]; error?: string } =>
       typeof s?.endTime === "string" && s.endTime !== ""
         ? s.endTime
         : null;
-    if (!isHHmm(startTime)) {
-      return { error: "開始時刻はHH:mm形式で指定してください" };
+    if (!isHHmmStep30(startTime)) {
+      return { error: "開始時刻は30分単位（:00か:30）で指定してください" };
     }
     if (endTime !== null) {
-      if (!isHHmm(endTime)) {
-        return { error: "終了時刻はHH:mm形式で指定してください" };
+      if (!isHHmmStep30(endTime)) {
+        return { error: "終了時刻は30分単位（:00か:30）で指定してください" };
       }
       if (startTime >= endTime) {
         return {

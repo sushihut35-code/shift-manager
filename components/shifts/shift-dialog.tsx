@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { WEEKDAY_LABELS, fromISO } from "@/lib/date";
+import { WEEKDAY_LABELS, fromISO, isHHmmStep30 } from "@/lib/date";
 import { format } from "date-fns";
 import type { ShiftDTO, StaffDTO, ShiftSlot } from "@/types";
 
@@ -65,6 +65,7 @@ function SlotInputs({
           <Input
             id={`${idPrefix}-start`}
             type="time"
+            step={1800}
             value={startTime}
             onChange={(e) => onStartTimeChange(e.target.value)}
           />
@@ -78,6 +79,7 @@ function SlotInputs({
             <Input
               id={`${idPrefix}-end`}
               type="time"
+              step={1800}
               value={endTime}
               onChange={(e) => onEndTimeChange(e.target.value)}
               className="flex-1"
@@ -157,15 +159,23 @@ function ShiftFormBody({
   const weekdayLabel = WEEKDAY_LABELS[dayNum === 0 ? 6 : dayNum - 1];
 
   // 入力からスロット配列を組み立て（クライアント側検証つき）
-  // 終了時刻は空欄可（終了未定のシフト）
+  // 終了時刻は空欄可（終了未定のシフト）。時刻は30分単位のみ
   const buildSlots = (): { slots?: ShiftSlot[]; error?: string } => {
     if (!slot1Start) {
       return { error: "1つ目の開始時刻を入力してください" };
     }
-    if (slot1End && slot1Start >= slot1End) {
-      return {
-        error: "終了時刻は開始時刻より後になるように指定してください",
-      };
+    if (!isHHmmStep30(slot1Start)) {
+      return { error: "開始時刻は30分単位（:00か:30）で指定してください" };
+    }
+    if (slot1End) {
+      if (!isHHmmStep30(slot1End)) {
+        return { error: "終了時刻は30分単位（:00か:30）で指定してください" };
+      }
+      if (slot1Start >= slot1End) {
+        return {
+          error: "終了時刻は開始時刻より後になるように指定してください",
+        };
+      }
     }
     const slots: ShiftSlot[] = [
       { startTime: slot1Start, endTime: slot1End || null },
@@ -175,10 +185,18 @@ function ShiftFormBody({
       if (!slot2Start) {
         return { error: "2つ目は開始時刻を入力してください" };
       }
-      if (slot2End && slot2Start >= slot2End) {
-        return {
-          error: "2つ目も終了時刻は開始時刻より後にしてください",
-        };
+      if (!isHHmmStep30(slot2Start)) {
+        return { error: "2つ目の開始時刻は30分単位で指定してください" };
+      }
+      if (slot2End) {
+        if (!isHHmmStep30(slot2End)) {
+          return { error: "2つ目の終了時刻は30分単位で指定してください" };
+        }
+        if (slot2Start >= slot2End) {
+          return {
+            error: "2つ目も終了時刻は開始時刻より後にしてください",
+          };
+        }
       }
       // 時刻順に並べて重複チェック（両方の終了が分かっている場合のみ）
       const sorted: ShiftSlot[] = [

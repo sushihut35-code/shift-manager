@@ -35,6 +35,10 @@ export const isISODate = (s: unknown): s is string =>
 export const isHHmm = (s: unknown): s is string =>
   typeof s === "string" && HHMM_RE.test(s);
 
+// "HH:mm" かつ30分単位（:00 か :30）の検証
+export const isHHmmStep30 = (s: unknown): s is string =>
+  isHHmm(s) && (s.endsWith(":00") || s.endsWith(":30"));
+
 // 任意の日付文字列からその週の月曜日の "YYYY-MM-DD" を得る（無効値は今週）
 export const getWeekStart = (iso: string): string =>
   toISO(startOfWeek(isISODate(iso) ? fromISO(iso) : new Date(), {
