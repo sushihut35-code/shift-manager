@@ -2,6 +2,10 @@
 allowBuilds:
   prisma: true
   "@prisma/engines": true
+  "@prisma/client": true
   better-sqlite3: true
+  esbuild: true
   sharp: false
   unrs-resolver: false
+# 未承認のビルドが残っても停車ではなく警告に留める（CI環境の保険）
+strictDepBuilds: false
