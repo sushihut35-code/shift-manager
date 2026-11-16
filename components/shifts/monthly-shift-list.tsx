@@ -1,9 +1,10 @@
-// 月表示シフト一覧（日付を行として縦に並べ、各日に全スタッフのシフトを表示）
+// 月表示シフトボード（スタッフ×日付のマス目を、その月ぶん横に並べて横スクロールで見る）
 
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
 import { MonthNavigator } from "@/components/shifts/month-navigator";
+import { ShiftCell } from "@/components/shifts/shift-cell";
 import { ShiftDialog } from "@/components/shifts/shift-dialog";
 import { getMonthDays, toISO, fromISO } from "@/lib/date";
 import { getHolidayName } from "@/lib/holidays";
@@ -18,20 +19,6 @@ interface MonthlyShiftListProps {
 
 // 曜日ラベル（日曜始まりの配列）
 const DAY_LABELS = ["日", "月", "火", "水", "木", "金", "土"];
-
-// その日のシフトを行表示用テキストに（例: "10:00〜19:00" / "10:00〜 / 17:30〜21:00"）
-const shiftText = (list: ShiftDTO[]): string | null => {
-  const slots = list
-    .filter((s) => !s.isDayOff && s.startTime)
-    .sort((a, b) => (a.startTime! < b.startTime! ? -1 : 1));
-  if (slots.length > 0) {
-    return slots
-      .map((s) => `${s.startTime}〜${s.endTime ?? ""}`)
-      .join(" / ");
-  }
-  if (list.some((s) => s.isDayOff)) return "休み";
-  return null;
-};
 
 export function MonthlyShiftList({
   staff,
@@ -55,20 +42,16 @@ export function MonthlyShiftList({
     setTodayISO(toISO(new Date()));
   }, []);
 
-  // date → シフト行の配列
-  const shiftsByDate = useMemo(() => {
-    const map = new Map<string, Map<string, ShiftDTO[]>>();
+  // staffId:date → シフト行の配列
+  const shiftMap = useMemo(() => {
+    const map = new Map<string, ShiftDTO[]>();
     for (const s of currentShifts) {
-      let byStaff = map.get(s.date);
-      if (!byStaff) {
-        byStaff = new Map();
-        map.set(s.date, byStaff);
-      }
-      const list = byStaff.get(s.staffId);
+      const key = `${s.staffId}:${s.date}`;
+      const list = map.get(key);
       if (list) {
         list.push(s);
       } else {
-        byStaff.set(s.staffId, [s]);
+        map.set(key, [s]);
       }
     }
     return map;
@@ -91,105 +74,94 @@ export function MonthlyShiftList({
     ? staff.find((s) => s.id === editing.staffId) ?? null
     : null;
   const editingShifts = editing
-    ? shiftsByDate.get(editing.date)?.get(editing.staffId) ?? null
+    ? shiftMap.get(`${editing.staffId}:${editing.date}`) ?? null
     : null;
+
+  // グリッド全体の最小幅（スタッフ列76px＋1日あたり76px）
+  const minWidth = 76 * (days.length + 1);
+  const gridTemplate = `76px repeat(${days.length}, 1fr)`;
 
   return (
     <div className="space-y-3">
       <MonthNavigator monthStart={monthStart} />
 
-      {/* 日付の縦並びリスト */}
-      <div className="space-y-2">
-        {days.map((d) => {
-          const dayNum = fromISO(d).getDay();
-          const holiday = getHolidayName(d);
-          const isToday = d === todayISO;
-          // 日曜・祝日は赤、土曜は青
-          const dateColor =
-            dayNum === 0 || holiday
-              ? "text-red-600"
-              : dayNum === 6
-                ? "text-blue-600"
-                : "text-gray-700";
-          const byStaff = shiftsByDate.get(d);
+      {/* 横スクロール領域（画面端まで出血） */}
+      <div className="overflow-x-auto -mx-4 px-4">
+        <div style={{ minWidth }}>
+          {/* 日付ヘッダー行 */}
+          <div
+            className="grid gap-1 mb-1"
+            style={{ gridTemplateColumns: gridTemplate }}
+          >
+            <div className="sticky left-0 z-20 bg-gray-50" />
+            {days.map((d) => {
+              const isToday = d === todayISO;
+              const dayNum = fromISO(d).getDay();
+              const holiday = getHolidayName(d);
+              const colorClass =
+                dayNum === 0 || holiday
+                  ? "text-red-600"
+                  : dayNum === 6
+                    ? "text-blue-600"
+                    : "text-gray-600";
+              return (
+                <div
+                  key={d}
+                  className={`text-center text-xs pt-1 pb-1 rounded-t-lg ${
+                    isToday ? "bg-blue-50 font-bold" : ""
+                  }`}
+                  title={holiday ?? undefined}
+                >
+                  <p className={colorClass}>{DAY_LABELS[dayNum]}</p>
+                  <p
+                    className={`${
+                      isToday ? "text-blue-700" : "text-gray-500"
+                    } mt-0.5`}
+                  >
+                    {format(fromISO(d), "d")}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
 
-          return (
-            <div
-              key={d}
-              className={`bg-white rounded-xl border overflow-hidden ${
-                isToday ? "border-blue-400" : "border-gray-200"
-              }`}
-            >
-              {/* 日付ヘッダー */}
+          {/* スタッフ行 */}
+          <div className="space-y-1">
+            {staff.map((s) => (
               <div
-                className={`flex items-baseline gap-2 px-3 py-1.5 border-b border-gray-100 ${
-                  isToday ? "bg-blue-50" : "bg-gray-50/60"
-                }`}
+                key={s.id}
+                className="grid gap-1"
+                style={{ gridTemplateColumns: gridTemplate }}
               >
-                <span className={`text-sm font-bold ${dateColor}`}>
-                  {format(fromISO(d), "d日")}
-                </span>
-                <span className={`text-xs font-medium ${dateColor}`}>
-                  ({DAY_LABELS[dayNum]})
-                </span>
-                {holiday && (
-                  <span className="text-[11px] text-red-500">{holiday}</span>
-                )}
-                {isToday && (
-                  <span className="ml-auto text-[10px] font-bold text-blue-600">
-                    今日
-                  </span>
-                )}
-              </div>
+                {/* スタッフ名（左固定） */}
+                <div className="sticky left-0 z-10 bg-gray-50 w-[76px] pr-2 flex items-center gap-1.5">
+                  <span
+                    className="w-2 h-2 rounded-full shrink-0"
+                    style={{ backgroundColor: s.displayColor }}
+                  />
+                  <span className="text-xs font-medium truncate">{s.name}</span>
+                </div>
 
-              {/* その日のスタッフ別シフト */}
-              <ul>
-                {staff.map((s) => {
-                  const list = byStaff?.get(s.id);
-                  const text = list ? shiftText(list) : null;
-                  const isDayOff = list?.some((x) => x.isDayOff);
-                  const hasMemo = list?.some((x) => x.memo);
-                  return (
-                    <li key={s.id} className="border-b border-gray-50 last:border-b-0">
-                      <button
-                        onClick={() => setEditing({ staffId: s.id, date: d })}
-                        className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-blue-50/40 transition-colors"
-                        aria-label={`${format(fromISO(d), "M月d日")} ${s.name}のシフト編集`}
-                      >
-                        <span
-                          className="w-2 h-2 rounded-full shrink-0"
-                          style={{ backgroundColor: s.displayColor }}
-                        />
-                        <span className="text-xs font-medium text-gray-700 w-16 shrink-0 truncate">
-                          {s.name}
-                        </span>
-                        {isDayOff ? (
-                          <span className="text-xs text-gray-400">休み</span>
-                        ) : text ? (
-                          <span className="text-xs font-medium text-gray-800">
-                            {text}
-                            {hasMemo && (
-                              <span className="text-gray-400 ml-1">…</span>
-                            )}
-                          </span>
-                        ) : (
-                          <span className="text-xs text-gray-300">—</span>
-                        )}
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          );
-        })}
+                {/* その月ぶんのセル */}
+                {days.map((d) => (
+                  <ShiftCell
+                    key={d}
+                    shifts={shiftMap.get(`${s.id}:${d}`)}
+                    staffColor={s.displayColor}
+                    onClick={() => setEditing({ staffId: s.id, date: d })}
+                  />
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
       <p className="text-[11px] text-gray-400 text-center pb-1">
-        名前の行をタップしてシフトを編集できます
+        セルをタップしてシフトを編集できます（左右にスクロールで月末まで続きます）
       </p>
 
-      {/* 編集ダイアログ（週表示と共用） */}
+      {/* 編集ダイアログ */}
       <ShiftDialog
         open={editing !== null}
         onOpenChange={(open) => {
