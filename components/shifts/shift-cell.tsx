@@ -8,8 +8,8 @@ interface ShiftCellProps {
   onClick: () => void;
 }
 
-// 1つの時間帯の表示
-function SlotLabel({ startTime, endTime }: { startTime: string; endTime: string }) {
+// 1つの時間帯の表示（endTime が無ければ「10:00〜」のように終了未定で出す）
+function SlotLabel({ startTime, endTime }: { startTime: string; endTime?: string | null }) {
   return (
     <>
       <span className="text-[11px] font-medium leading-tight">
@@ -17,7 +17,7 @@ function SlotLabel({ startTime, endTime }: { startTime: string; endTime: string 
       </span>
       <span className="text-[11px] text-gray-500 leading-tight">〜</span>
       <span className="text-[11px] font-medium leading-tight">
-        {endTime}
+        {endTime ?? ""}
       </span>
     </>
   );
@@ -39,9 +39,9 @@ export function ShiftCell({ shifts, staffColor, onClick }: ShiftCellProps) {
     );
   }
 
-  // 時間帯シフト（1〜2件）
+  // 時間帯シフト（1〜2件・終了未定を含む）
   const timeSlots = list.filter(
-    (s) => !s.isDayOff && s.startTime && s.endTime
+    (s) => !s.isDayOff && s.startTime
   );
 
   if (timeSlots.length > 0) {
@@ -53,7 +53,7 @@ export function ShiftCell({ shifts, staffColor, onClick }: ShiftCellProps) {
           timeSlots.length === 2 ? "min-h-[88px] gap-0.5 py-1" : "min-h-[64px] gap-0.5"
         }`}
         aria-label={timeSlots
-          .map((s) => `${s.startTime}〜${s.endTime}`)
+          .map((s) => `${s.startTime}〜${s.endTime ?? ""}`)
           .join("と")}
       >
         <span
@@ -67,7 +67,7 @@ export function ShiftCell({ shifts, staffColor, onClick }: ShiftCellProps) {
                 ─
               </span>
             )}
-            <SlotLabel startTime={s.startTime!} endTime={s.endTime!} />
+            <SlotLabel startTime={s.startTime!} endTime={s.endTime} />
           </span>
         ))}
         {hasMemo && (

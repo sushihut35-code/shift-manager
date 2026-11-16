@@ -52,6 +52,7 @@ export async function GET(request: NextRequest) {
 }
 
 // スロット配列の検証と時刻順ソート（不正なら日本語エラー文を返す）
+// endTime は空欄可（終了未定のシフト）
 const validateSlots = (raw: unknown): { slots?: ShiftSlot[]; error?: string } => {
   if (!Array.isArray(raw) || raw.length === 0) {
     return { error: "時間帯を1つ以上指定してください" };
@@ -63,23 +64,33 @@ const validateSlots = (raw: unknown): { slots?: ShiftSlot[]; error?: string } =>
   for (const s of raw) {
     const startTime =
       typeof s?.startTime === "string" ? s.startTime : "";
-    const endTime = typeof s?.endTime === "string" ? s.endTime : "";
-    if (!isHHmm(startTime) || !isHHmm(endTime)) {
-      return { error: "時刻はHH:mm形式で指定してください" };
+    const endTime =
+      typeof s?.endTime === "string" && s.endTime !== ""
+        ? s.endTime
+        : null;
+    if (!isHHmm(startTime)) {
+      return { error: "開始時刻はHH:mm形式で指定してください" };
     }
-    if (startTime >= endTime) {
-      return {
-        error: "終了時刻は開始時刻より後になるように指定してください",
-      };
+    if (endTime !== null) {
+      if (!isHHmm(endTime)) {
+        return { error: "終了時刻はHH:mm形式で指定してください" };
+      }
+      if (startTime >= endTime) {
+        return {
+          error: "終了時刻は開始時刻より後になるように指定してください",
+        };
+      }
     }
     slots.push({ startTime, endTime });
   }
   // 時刻順に並べ替え
   slots.sort((a, b) => (a.startTime < b.startTime ? -1 : 1));
-  // 時間帯の重複チェック
+  // 時間帯の重複チェック（両方の終了時刻が分かっている場合のみ）
   if (
     slots.length === 2 &&
-    slots[0].endTime > slots[1].startTime
+    slots[0].endTime !== null &&
+    slots[1].endTime !== null &&
+    slots[0].endTime! > slots[1].startTime
   ) {
     return { error: "2つの時間帯が重ならないように指定してください" };
   }

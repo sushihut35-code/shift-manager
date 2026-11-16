@@ -33,10 +33,10 @@ export interface ShiftDTO {
   updatedAt: string;
 }
 
-// 1つの時間帯（例: 11:00〜15:00）
+// 1つの時間帯（例: 11:00〜15:00。endTime未指定=終了未定）
 export interface ShiftSlot {
   startTime: string;
-  endTime: string;
+  endTime?: string | null;
 }
 
 // シフト保存リクエストの値（その日その人の全シフトを置き換える）

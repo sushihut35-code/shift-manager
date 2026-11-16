@@ -72,7 +72,7 @@ function SlotInputs({
         <span className="pb-2 text-gray-400">〜</span>
         <div className="space-y-1 flex-1">
           <Label htmlFor={`${idPrefix}-end`} className="text-xs text-gray-500">
-            終了
+            終了（未定可）
           </Label>
           <Input
             id={`${idPrefix}-end`}
@@ -145,34 +145,39 @@ function ShiftFormBody({
   const weekdayLabel = WEEKDAY_LABELS[dayNum === 0 ? 6 : dayNum - 1];
 
   // 入力からスロット配列を組み立て（クライアント側検証つき）
+  // 終了時刻は空欄可（終了未定のシフト）
   const buildSlots = (): { slots?: ShiftSlot[]; error?: string } => {
-    if (!slot1Start || !slot1End) {
-      return { error: "1つ目の開始・終了時刻を入力してください" };
+    if (!slot1Start) {
+      return { error: "1つ目の開始時刻を入力してください" };
     }
-    if (slot1Start >= slot1End) {
+    if (slot1End && slot1Start >= slot1End) {
       return {
         error: "終了時刻は開始時刻より後になるように指定してください",
       };
     }
     const slots: ShiftSlot[] = [
-      { startTime: slot1Start, endTime: slot1End },
+      { startTime: slot1Start, endTime: slot1End || null },
     ];
     const slot2Filled = slot2Start !== "" || slot2End !== "";
     if (slot2Filled) {
-      if (!slot2Start || !slot2End) {
-        return { error: "2つ目は開始・終了の両方を入力してください" };
+      if (!slot2Start) {
+        return { error: "2つ目は開始時刻を入力してください" };
       }
-      if (slot2Start >= slot2End) {
+      if (slot2End && slot2Start >= slot2End) {
         return {
           error: "2つ目も終了時刻は開始時刻より後にしてください",
         };
       }
-      // 時刻順に並べて重複チェック
-      const sorted = [
-        { startTime: slot1Start, endTime: slot1End },
-        { startTime: slot2Start, endTime: slot2End },
+      // 時刻順に並べて重複チェック（両方の終了が分かっている場合のみ）
+      const sorted: ShiftSlot[] = [
+        { startTime: slot1Start, endTime: slot1End || null },
+        { startTime: slot2Start, endTime: slot2End || null },
       ].sort((a, b) => (a.startTime < b.startTime ? -1 : 1));
-      if (sorted[0].endTime > sorted[1].startTime) {
+      if (
+        sorted[0].endTime !== null &&
+        sorted[1].endTime !== null &&
+        sorted[0].endTime! > sorted[1].startTime
+      ) {
         return { error: "2つの時間帯が重ならないようにしてください" };
       }
       slots.length = 0;

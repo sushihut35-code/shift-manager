@@ -19,13 +19,15 @@ interface MonthlyShiftListProps {
 // 曜日ラベル（日曜始まりの配列）
 const DAY_LABELS = ["日", "月", "火", "水", "木", "金", "土"];
 
-// その日のシフトを行表示用テキストに（例: "10:00〜19:00" / "11:00〜15:00 / 17:30〜21:00"）
+// その日のシフトを行表示用テキストに（例: "10:00〜19:00" / "10:00〜 / 17:30〜21:00"）
 const shiftText = (list: ShiftDTO[]): string | null => {
   const slots = list
-    .filter((s) => !s.isDayOff && s.startTime && s.endTime)
+    .filter((s) => !s.isDayOff && s.startTime)
     .sort((a, b) => (a.startTime! < b.startTime! ? -1 : 1));
   if (slots.length > 0) {
-    return slots.map((s) => `${s.startTime}〜${s.endTime}`).join(" / ");
+    return slots
+      .map((s) => `${s.startTime}〜${s.endTime ?? ""}`)
+      .join(" / ");
   }
   if (list.some((s) => s.isDayOff)) return "休み";
   return null;
