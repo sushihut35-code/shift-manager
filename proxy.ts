@@ -1,8 +1,10 @@
-// クッキーログイン認証（Basic認証の代わり。一度のログインで1年記憶）
-// BASIC_AUTH_PASSWORD が設定されている場合のみ有効。未設定（ローカル開発等）では素通し。
+// クッキーログイン認証＋URLキー自動解錠
+// （ホーム追加アプリはSafariとクッキー棚が別になるiOS仕様のため、
+// 　URLに ?key= を含めることで開いた瞬間に自動ログインさせる）
+// BASIC_AUTH_PASSWORD が設定されている場合のみ有効。未設定では素通し。
 
 import { NextRequest, NextResponse } from "next/server";
-import { AUTH_COOKIE_NAME, isAuthEnabled, isValidToken } from "@/lib/auth";
+import { AUTH_COOKIE_NAME, isAuthEnabled, isValidToken, makeToken } from "@/lib/auth";
 
 export function proxy(request: NextRequest) {
   // 未設定（ローカル開発等）では素通し
@@ -14,6 +16,20 @@ export function proxy(request: NextRequest) {
   const token = request.cookies.get(AUTH_COOKIE_NAME)?.value;
   if (isValidToken(token)) {
     return NextResponse.next();
+  }
+
+  // URLキー（?key=）が正しければ、クッキーを発行して通す
+  const key = request.nextUrl.searchParams.get("key") ?? "";
+  if (key && key === process.env.BASIC_AUTH_PASSWORD) {
+    const res = NextResponse.next();
+    res.cookies.set(AUTH_COOKIE_NAME, makeToken(key), {
+      httpOnly: true,
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24 * 365, // 1年
+      path: "/",
+      secure: true,
+    });
+    return res;
   }
 
   // API には JSON で 401、ページはログインへ誘導
