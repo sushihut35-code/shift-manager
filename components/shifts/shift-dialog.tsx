@@ -74,12 +74,24 @@ function SlotInputs({
           <Label htmlFor={`${idPrefix}-end`} className="text-xs text-gray-500">
             終了（未定可）
           </Label>
-          <Input
-            id={`${idPrefix}-end`}
-            type="time"
-            value={endTime}
-            onChange={(e) => onEndTimeChange(e.target.value)}
-          />
+          <div className="flex gap-1">
+            <Input
+              id={`${idPrefix}-end`}
+              type="time"
+              value={endTime}
+              onChange={(e) => onEndTimeChange(e.target.value)}
+              className="flex-1"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => onEndTimeChange("")}
+              title="終了を未定に戻す"
+            >
+              未定
+            </Button>
+          </div>
         </div>
       </div>
     </div>
