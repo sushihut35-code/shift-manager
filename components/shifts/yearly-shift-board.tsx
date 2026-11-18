@@ -84,11 +84,33 @@ export function YearlyShiftBoard({
   };
 
   // マウント時（hydration後）に今日の位置へ一瞬で移動
+  // ※ PWA/モバイルでは初回レンダー直後のscrollToが無視されることがあるため、
+  // 　描画2フレーム後と150ms後の計3回で念押しする
   useEffect(() => {
-    if (todayISO && days.includes(todayISO)) {
-      scrollToDate(todayISO, false);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- 初回のみで良い
+    if (!todayISO || !days.includes(todayISO)) return;
+    const el = scrollRef.current;
+    if (!el) return;
+
+    const idx = days.indexOf(todayISO);
+    const target = Math.max(
+      0,
+      NAME_W + idx * COL_W + COL_W / 2 - el.clientWidth / 2
+    );
+    const jump = () => {
+      if (Math.abs(el.scrollLeft - target) > 1) {
+        el.scrollTo({ left: target, behavior: "auto" });
+      }
+    };
+
+    const raf1 = requestAnimationFrame(() => {
+      requestAnimationFrame(jump);
+    });
+    const timer = setTimeout(jump, 150);
+    return () => {
+      cancelAnimationFrame(raf1);
+      clearTimeout(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 今日が確定した初回のみで良い
   }, [todayISO]);
 
   // スクロール位置から「見ている日付」を算出してラベル更新
