@@ -2,7 +2,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -98,6 +98,7 @@ function SlotInputs({
 
 // 30分単位の時刻選択器（時0〜23＋分00/30の二段プルダウン）
 // ※ iOS Safari は time入力の step 指定を無視するため、独自に選択肢を絞る
+// 「時」を選んだ時点で分は00として確定し、分を後から変えられる
 const HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0"));
 const MINUTES = ["00", "30"];
 
@@ -113,12 +114,34 @@ function TimeSelect({
   value: string; // "" or "HH:mm"
   onChange: (v: string) => void;
 }) {
-  const hour = value ? value.slice(0, 2) : "";
-  const minute = value ? value.slice(3, 5) : "";
+  // ローカルに時・分を保持し、両方揃った時だけ親へ確定値を渡す
+  const [hour, setHour] = useState(value ? value.slice(0, 2) : "");
+  const [minute, setMinute] = useState(
+    value ? value.slice(3, 5) : "00"
+  );
 
-  const compose = (h: string, m: string) => {
-    // 時と分が揃った時だけ値として確定する
-    onChange(h && m ? `${h}:${m}` : "");
+  // 外部から値が変わったら（未定ボタン等）ローカルも同期
+  useEffect(() => {
+    setHour(value ? value.slice(0, 2) : "");
+    setMinute(value ? value.slice(3, 5) : "00");
+  }, [value]);
+
+  const handleHour = (h: string) => {
+    if (!h) {
+      // 「時」を未選択に戻したら値を空にする
+      setHour("");
+      onChange("");
+      return;
+    }
+    setHour(h);
+    onChange(`${h}:${minute}`);
+  };
+
+  const handleMinute = (m: string) => {
+    setMinute(m);
+    if (hour) {
+      onChange(`${hour}:${m}`);
+    }
   };
 
   return (
@@ -127,7 +150,7 @@ function TimeSelect({
         id={id}
         className={selectClass}
         value={hour}
-        onChange={(e) => compose(e.target.value, minute)}
+        onChange={(e) => handleHour(e.target.value)}
         aria-label="時"
       >
         <option value="">時</option>
@@ -141,10 +164,9 @@ function TimeSelect({
       <select
         className={selectClass}
         value={minute}
-        onChange={(e) => compose(hour, e.target.value)}
+        onChange={(e) => handleMinute(e.target.value)}
         aria-label="分"
       >
-        <option value="">分</option>
         {MINUTES.map((m) => (
           <option key={m} value={m}>
             {m}
