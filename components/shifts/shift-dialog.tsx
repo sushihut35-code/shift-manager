@@ -124,7 +124,6 @@ function TimeSelect({
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- 親の値変更（未定ボタン等）に追従するための正当な同期処理
     setHour(value ? value.slice(0, 2) : "");
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- 同上
     setMinute(value ? value.slice(3, 5) : "00");
   }, [value]);
 
