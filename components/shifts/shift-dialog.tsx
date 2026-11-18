@@ -62,12 +62,10 @@ function SlotInputs({
           <Label htmlFor={`${idPrefix}-start`} className="text-xs text-gray-500">
             開始
           </Label>
-          <Input
+          <TimeSelect
             id={`${idPrefix}-start`}
-            type="time"
-            step={1800}
             value={startTime}
-            onChange={(e) => onStartTimeChange(e.target.value)}
+            onChange={onStartTimeChange}
           />
         </div>
         <span className="pb-2 text-gray-400">〜</span>
@@ -76,14 +74,13 @@ function SlotInputs({
             終了（未定可）
           </Label>
           <div className="flex gap-1">
-            <Input
-              id={`${idPrefix}-end`}
-              type="time"
-              step={1800}
-              value={endTime}
-              onChange={(e) => onEndTimeChange(e.target.value)}
-              className="flex-1"
-            />
+            <div className="flex-1">
+              <TimeSelect
+                id={`${idPrefix}-end`}
+                value={endTime}
+                onChange={onEndTimeChange}
+              />
+            </div>
             <Button
               type="button"
               variant="outline"
@@ -96,6 +93,65 @@ function SlotInputs({
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+// 30分単位の時刻選択器（時0〜23＋分00/30の二段プルダウン）
+// ※ iOS Safari は time入力の step 指定を無視するため、独自に選択肢を絞る
+const HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0"));
+const MINUTES = ["00", "30"];
+
+const selectClass =
+  "h-8 w-full rounded-lg border border-input bg-transparent px-1.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30";
+
+function TimeSelect({
+  id,
+  value,
+  onChange,
+}: {
+  id: string;
+  value: string; // "" or "HH:mm"
+  onChange: (v: string) => void;
+}) {
+  const hour = value ? value.slice(0, 2) : "";
+  const minute = value ? value.slice(3, 5) : "";
+
+  const compose = (h: string, m: string) => {
+    // 時と分が揃った時だけ値として確定する
+    onChange(h && m ? `${h}:${m}` : "");
+  };
+
+  return (
+    <div className="flex items-center gap-1">
+      <select
+        id={id}
+        className={selectClass}
+        value={hour}
+        onChange={(e) => compose(e.target.value, minute)}
+        aria-label="時"
+      >
+        <option value="">時</option>
+        {HOURS.map((h) => (
+          <option key={h} value={h}>
+            {h}
+          </option>
+        ))}
+      </select>
+      <span className="text-gray-400">:</span>
+      <select
+        className={selectClass}
+        value={minute}
+        onChange={(e) => compose(hour, e.target.value)}
+        aria-label="分"
+      >
+        <option value="">分</option>
+        {MINUTES.map((m) => (
+          <option key={m} value={m}>
+            {m}
+          </option>
+        ))}
+      </select>
     </div>
   );
 }
