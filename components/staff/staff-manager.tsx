@@ -1,8 +1,8 @@
-// スタッフ管理コンポーネント（一覧・追加・編集・非アクティブ切替・削除）
+// スタッフ管理コンポーネント（一覧・追加・編集・非アクティブ切替・削除・バックアップ）
 
 "use client";
 
-import { useCallback, useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus, Pencil, Power, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -19,26 +19,32 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { StaffFormDialog } from "@/components/staff/staff-form-dialog";
+import {
+  getStaff,
+  saveStaff,
+  deleteStaff as dbDeleteStaff,
+  exportAll,
+  importAll,
+  resetAll,
+} from "@/lib/local-db";
 import type { StaffDTO } from "@/types";
 
-interface StaffManagerProps {
-  initialStaff: StaffDTO[];
-}
-
-export function StaffManager({ initialStaff }: StaffManagerProps) {
-  const [staff, setStaff] = useState<StaffDTO[]>(initialStaff);
+export function StaffManager() {
+  const [staff, setStaff] = useState<StaffDTO[]>([]);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<StaffDTO | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
-  // 一覧を再取得
-  const refresh = useCallback(async () => {
-    const res = await fetch("/api/staff", { cache: "no-store" });
-    if (res.ok) {
-      const data = await res.json();
-      setStaff(data.items);
-    }
+  // 端末内データを読み込む（hydration後）
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- localStorageは端末内のみに存在するため、hydration後にクライアント側で読み込むのが安全
+    setStaff(getStaff());
   }, []);
+
+  // 一覧を再読み込み
+  const refresh = () => {
+    setStaff(getStaff());
+  };
 
   // 追加ボタン
   const handleAdd = () => {
@@ -53,32 +59,22 @@ export function StaffManager({ initialStaff }: StaffManagerProps) {
   };
 
   // 非アクティブ切替
-  const handleToggleActive = async (s: StaffDTO) => {
+  const handleToggleActive = (s: StaffDTO) => {
     setBusyId(s.id);
     try {
-      await fetch(`/api/staff/${s.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: s.name,
-          displayColor: s.displayColor,
-          sortOrder: s.sortOrder,
-          memo: s.memo,
-          isActive: !s.isActive,
-        }),
-      });
-      await refresh();
+      saveStaff({ ...s, isActive: !s.isActive });
+      refresh();
     } finally {
       setBusyId(null);
     }
   };
 
   // 削除
-  const handleDelete = async (s: StaffDTO) => {
+  const handleDelete = (s: StaffDTO) => {
     setBusyId(s.id);
     try {
-      await fetch(`/api/staff/${s.id}`, { method: "DELETE" });
-      await refresh();
+      dbDeleteStaff(s.id);
+      refresh();
     } finally {
       setBusyId(null);
     }
@@ -193,6 +189,74 @@ export function StaffManager({ initialStaff }: StaffManagerProps) {
         staff={editing}
         onSaved={refresh}
       />
+
+      {/* バックアップ（端末内保存の生命線） */}
+      <BackupSection onRestored={refresh} />
     </div>
+  );
+}
+
+// バックアップ（書き出し/読み込み/初期化）
+function BackupSection({ onRestored }: { onRestored: () => void }) {
+  const [text, setText] = useState("");
+  const [msg, setMsg] = useState("");
+
+  const handleExport = async () => {
+    const data = exportAll();
+    setText(data);
+    try {
+      await navigator.clipboard.writeText(data);
+      setMsg("書き出しました（コピーも済ませてあります）");
+    } catch {
+      setMsg("書き出しました。下の枠の全文をコピーして保存してください");
+    }
+  };
+
+  const handleImport = () => {
+    try {
+      importAll(text);
+      onRestored();
+      setMsg("読み込みました");
+    } catch {
+      setMsg("読み込みに失敗しました（データ形式が違います）");
+    }
+  };
+
+  const handleReset = () => {
+    if (window.confirm("端末のデータを消して、最初のデータに戻します。よろしいですか？")) {
+      resetAll();
+      onRestored();
+      setMsg("初期データに戻しました");
+    }
+  };
+
+  return (
+    <section className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
+      <div>
+        <h2 className="font-semibold text-sm">データのバックアップ</h2>
+        <p className="text-[11px] text-gray-500 mt-0.5">
+          この端末の中だけに保存されています。機種変更の前などに「書き出し」で全文をメモなどに保存してください
+        </p>
+      </div>
+      <div className="flex gap-2">
+        <Button variant="outline" size="sm" onClick={handleExport}>
+          書き出し
+        </Button>
+        <Button variant="outline" size="sm" onClick={handleImport} disabled={!text.trim()}>
+          読み込み
+        </Button>
+        <Button variant="ghost" size="sm" onClick={handleReset}>
+          最初のデータに戻す
+        </Button>
+      </div>
+      <textarea
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        rows={3}
+        placeholder="「書き出し」でここにデータが出ます。復元するときは保存しておいた全文をここに貼り付けて「読み込み」"
+        className="w-full text-[10px] font-mono rounded-lg border border-gray-200 p-2 bg-gray-50"
+      />
+      {msg && <p className="text-xs text-gray-600">{msg}</p>}
+    </section>
   );
 }

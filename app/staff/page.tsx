@@ -1,16 +1,9 @@
-// スタッフ管理ページ
+// スタッフ管理ページ（端末内データから読み込む）
 
-import { connection } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { toStaffDto } from "@/lib/dto";
+"use client";
+
 import { StaffManager } from "@/components/staff/staff-manager";
 
-export default async function StaffPage() {
-  await connection(); // リクエストごとに最新のスタッフ一覧を取得
-
-  const staff = await prisma.staff.findMany({
-    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
-  });
-
-  return <StaffManager initialStaff={staff.map(toStaffDto)} />;
+export default function StaffPage() {
+  return <StaffManager />;
 }

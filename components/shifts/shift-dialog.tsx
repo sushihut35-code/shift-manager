@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { WEEKDAY_LABELS, fromISO, isHHmmStep30 } from "@/lib/date";
+import { replaceShifts } from "@/lib/local-db";
 import { format } from "date-fns";
 import type { ShiftDTO, StaffDTO, ShiftSlot } from "@/types";
 
@@ -315,41 +316,38 @@ function ShiftFormBody({
 
     setSaving(true);
     try {
+      const memoValue = memo.trim() || undefined;
+
       // なし → 全削除
       if (kind === "none") {
         if (shifts && shifts.length > 0) {
-          const res = await fetch(
-            `/api/shifts?staffId=${staff.id}&date=${date}`,
-            { method: "DELETE" }
-          );
-          if (!res.ok) {
-            const data = await res.json().catch(() => null);
-            setError(data?.error ?? "削除に失敗しました");
-            return;
-          }
+          replaceShifts(staff.id, date, []);
         }
         onSaved();
         onOpenChange(false);
         return;
       }
 
-      // 休み / シフト → 全置き換え
-      const res = await fetch("/api/shifts", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          staffId: staff.id,
-          date,
-          isDayOff: kind === "dayOff",
-          slots: kind === "shift" ? slots : undefined,
-          memo: memo.trim() || undefined,
-        }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => null);
-        setError(data?.error ?? "保存に失敗しました");
-        return;
-      }
+      // 休み → 休み行1件 / シフト → 時間帯の行
+      const rows =
+        kind === "dayOff"
+          ? [
+              {
+                staffId: staff.id,
+                date,
+                isDayOff: true,
+                memo: memoValue,
+              },
+            ]
+          : slots!.map((slot) => ({
+              staffId: staff.id,
+              date,
+              startTime: slot.startTime,
+              endTime: slot.endTime ?? undefined,
+              isDayOff: false,
+              memo: memoValue,
+            }));
+      replaceShifts(staff.id, date, rows);
       onSaved();
       onOpenChange(false);
     } catch {

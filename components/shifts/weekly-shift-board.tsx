@@ -14,12 +14,14 @@ interface WeeklyShiftBoardProps {
   staff: StaffDTO[];
   shifts: ShiftDTO[];
   weekStart: string;
+  onRefresh?: () => void; // 保存後に親へ再読み込みを促す
 }
 
 export function WeeklyShiftBoard({
   staff,
   shifts,
   weekStart,
+  onRefresh,
 }: WeeklyShiftBoardProps) {
   const [currentShifts, setCurrentShifts] = useState<ShiftDTO[]>(shifts);
   const [editing, setEditing] = useState<{
@@ -27,8 +29,13 @@ export function WeeklyShiftBoard({
     date: string;
   } | null>(null);
 
+  // 親から渡されるシフトの更新に追随
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 親で再読み込みされたデータへの同期
+    setCurrentShifts(shifts);
+  }, [shifts]);
+
   const days = useMemo(() => getWeekDays(weekStart), [weekStart]);
-  const weekEnd = days[6];
 
   // 「今日」はhydration後にクライアント側で確定させる
   // （SSR時点のサーバー日付とブラウザ日付が食い違うとhydrationエラーで
@@ -54,16 +61,9 @@ export function WeeklyShiftBoard({
     return map;
   }, [currentShifts]);
 
-  // 保存後に週のシフトを再取得
-  const refreshShifts = async () => {
-    const res = await fetch(
-      `/api/shifts?start=${weekStart}&end=${weekEnd}`,
-      { cache: "no-store" }
-    );
-    if (res.ok) {
-      const data = await res.json();
-      setCurrentShifts(data.items);
-    }
+  // 保存後に親へ再読み込みを促す
+  const refreshShifts = () => {
+    onRefresh?.();
   };
 
   const editingStaff = editing

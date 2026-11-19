@@ -22,6 +22,7 @@ interface YearlyShiftBoardProps {
   staff: StaffDTO[];
   shifts: ShiftDTO[];
   yearStart: string; // その年の1月1日
+  onRefresh?: () => void; // 保存後に親へ再読み込みを促す
 }
 
 // 1列の幅（px）— スクロール位置計算の基準
@@ -36,12 +37,19 @@ export function YearlyShiftBoard({
   staff,
   shifts,
   yearStart,
+  onRefresh,
 }: YearlyShiftBoardProps) {
   const [currentShifts, setCurrentShifts] = useState<ShiftDTO[]>(shifts);
   const [editing, setEditing] = useState<{
     staffId: string;
     date: string;
   } | null>(null);
+
+  // 親から渡されるシフトの更新に追随
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 親で再読み込みされたデータへの同期
+    setCurrentShifts(shifts);
+  }, [shifts]);
 
   const days = useMemo(() => getYearDays(yearStart), [yearStart]);
 
@@ -135,17 +143,9 @@ export function YearlyShiftBoard({
     };
   }, [days]);
 
-  // 保存後に年のシフトを再取得
-  const refreshShifts = async () => {
-    const yearEnd = days[days.length - 1];
-    const res = await fetch(
-      `/api/shifts?start=${yearStart}&end=${yearEnd}`,
-      { cache: "no-store" }
-    );
-    if (res.ok) {
-      const data = await res.json();
-      setCurrentShifts(data.items);
-    }
+  // 保存後に親へ再読み込みを促す
+  const refreshShifts = () => {
+    onRefresh?.();
   };
 
   const editingStaff = editing

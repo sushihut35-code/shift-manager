@@ -1,16 +1,17 @@
 // PWA マニフェスト（ホーム画面追加時にアプリ名・アイコン・全画面起動を定義する）
-// iOSのホーム追加アプリはSafariとクッキーが別棚になるため、
-// start_url に ?key= を埋めて開いた瞬間に自動ログインさせる
+// 完全静的化に伴い鍵は不要（データは各端末の中にしか無いため）
 
 import type { MetadataRoute } from "next";
 
+// 静的書き出し（output: export）では静的宣言が必要
+export const dynamic = "force-static";
+
 export default function manifest(): MetadataRoute.Manifest {
-  const password = process.env.BASIC_AUTH_PASSWORD;
   return {
     name: "シフト管理",
     short_name: "シフト",
     description: "週次シフトを管理するアプリ",
-    start_url: password ? `/?key=${encodeURIComponent(password)}` : "/",
+    start_url: "/",
     display: "standalone",
     background_color: "#f9fafb",
     theme_color: "#2563eb",

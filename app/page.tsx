@@ -1,34 +1,41 @@
 // シフトページ（既定は年表示 / ?view=week&week=YYYY-MM-DD で週表示）
+// 端末内データ庫（localStorage）から読み込む
 
+"use client";
+
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { UserPlus } from "lucide-react";
-import { prisma } from "@/lib/prisma";
-import { toStaffDto, toShiftDto } from "@/lib/dto";
-import {
-  getWeekStart,
-  getYearStart,
-  addDaysISO,
-  getYearDays,
-} from "@/lib/date";
+import { useSearchParams } from "next/navigation";
+import { getStaff, getShifts } from "@/lib/local-db";
+import { getWeekStart, getYearStart, addDaysISO, getYearDays } from "@/lib/date";
 import { WeeklyShiftBoard } from "@/components/shifts/weekly-shift-board";
 import { YearlyShiftBoard } from "@/components/shifts/yearly-shift-board";
+import type { StaffDTO, ShiftDTO } from "@/types";
 
-export default async function HomePage({
-  searchParams,
-}: {
-  searchParams: Promise<{
-    view?: string;
-    year?: string;
-    month?: string;
-    week?: string;
-  }>;
-}) {
-  const { view = "year", year, month, week } = await searchParams; // Next.js 16: Promise を await
+function HomePageInner() {
+  const searchParams = useSearchParams();
+  const view = searchParams.get("view") ?? "year";
 
-  const staff = await prisma.staff.findMany({
-    where: { isActive: true },
-    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
-  });
+  // データはhydration後に端末内から読み込む（SSR時は空）
+  const [staff, setStaff] = useState<StaffDTO[]>([]);
+  const [shifts, setShifts] = useState<ShiftDTO[]>([]);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- localStorageは端末内のみに存在するため、hydration後にクライアント側で読み込むのが安全
+    setStaff(getStaff());
+    setShifts(getShifts());
+    setLoaded(true);
+  }, []);
+
+  const refresh = () => {
+    setStaff(getStaff());
+    setShifts(getShifts());
+  };
+
+  // 読み込み完了まで何も描かない（ちらつき防止）
+  if (!loaded) return null;
 
   // スタッフ未登録なら案内
   if (staff.length === 0) {
@@ -48,35 +55,48 @@ export default async function HomePage({
 
   // 週表示（?view=week）
   if (view === "week") {
-    const weekStart = getWeekStart(week ?? ""); // 無効・未指定は今週の月曜
+    const weekStart = getWeekStart(searchParams.get("week") ?? "");
     const weekEnd = addDaysISO(weekStart, 6);
-    const shifts = await prisma.shift.findMany({
-      where: { date: { gte: weekStart, lte: weekEnd } },
-      orderBy: { date: "asc" },
-    });
+    const weekShifts = shifts.filter(
+      (v) => v.date >= weekStart && v.date <= weekEnd
+    );
 
     return (
       <WeeklyShiftBoard
-        staff={staff.map(toStaffDto)}
-        shifts={shifts.map(toShiftDto)}
+        staff={staff}
+        shifts={weekShifts}
         weekStart={weekStart}
+        onRefresh={refresh}
       />
     );
   }
 
-  // 年表示（既定）: ?year=YYYY（month/week指定は年へ読み替え）
-  const yearStart = getYearStart(year ?? month ?? week ?? "");
+  // 年表示（既定）
+  const yearStart = getYearStart(
+    searchParams.get("year") ??
+      searchParams.get("month") ??
+      searchParams.get("week") ??
+      ""
+  );
   const yearEnd = getYearDays(yearStart).at(-1)!;
-  const shifts = await prisma.shift.findMany({
-    where: { date: { gte: yearStart, lte: yearEnd } },
-    orderBy: [{ date: "asc" }, { startTime: "asc" }],
-  });
+  const yearShifts = shifts.filter(
+    (v) => v.date >= yearStart && v.date <= yearEnd
+  );
 
   return (
     <YearlyShiftBoard
-      staff={staff.map(toStaffDto)}
-      shifts={shifts.map(toShiftDto)}
+      staff={staff}
+      shifts={yearShifts}
       yearStart={yearStart}
+      onRefresh={refresh}
     />
+  );
+}
+
+export default function HomePage() {
+  return (
+    <Suspense>
+      <HomePageInner />
+    </Suspense>
   );
 }

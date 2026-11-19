@@ -1,0 +1,133 @@
+{
+  "exportedAt": "2026-11-19T08:55:25.062Z",
+  "staff": [
+    {
+      "id": "28a31171-d60b-4ed1-ba40-c1d2fc30bf7d",
+      "name": "甲斐",
+      "displayColor": "#eeed00",
+      "sortOrder": 1,
+      "isActive": true
+    },
+    {
+      "id": "c0f20c3f-5307-49f6-be99-b91b0fd50543",
+      "name": "詩月",
+      "displayColor": "#F472B6",
+      "sortOrder": 2,
+      "isActive": true
+    },
+    {
+      "id": "d77efae6-82a1-4229-8399-97115ecc142e",
+      "name": "蓮信",
+      "displayColor": "#34D399",
+      "sortOrder": 3,
+      "isActive": true
+    },
+    {
+      "id": "b3d4828d-155b-45ee-ab88-ed0f362f0fbf",
+      "name": "怜奈",
+      "displayColor": "#0037fb",
+      "sortOrder": 4,
+      "isActive": true
+    }
+  ],
+  "shifts": [
+    {
+      "id": "e15d34ce-3871-4426-853d-beb1eb5b6540",
+      "staffId": "28a31171-d60b-4ed1-ba40-c1d2fc30bf7d",
+      "date": "2026-11-21",
+      "startTime": "11:30",
+      "isDayOff": false
+    },
+    {
+      "id": "83910f7c-cccc-4cab-ab78-91336d1f33a0",
+      "staffId": "b3d4828d-155b-45ee-ab88-ed0f362f0fbf",
+      "date": "2026-11-21",
+      "startTime": "12:00",
+      "isDayOff": false
+    },
+    {
+      "id": "a8e52c5a-2009-47c7-8ac7-fcd5e44a25f6",
+      "staffId": "d77efae6-82a1-4229-8399-97115ecc142e",
+      "date": "2026-11-21",
+      "startTime": "16:00",
+      "isDayOff": false
+    },
+    {
+      "id": "106200d3-cd86-44f0-8a21-f0292cb7db05",
+      "staffId": "c0f20c3f-5307-49f6-be99-b91b0fd50543",
+      "date": "2026-11-21",
+      "startTime": "17:30",
+      "isDayOff": false
+    },
+    {
+      "id": "9377c0c9-1587-4dbc-807d-a227f5bbc111",
+      "staffId": "28a31171-d60b-4ed1-ba40-c1d2fc30bf7d",
+      "date": "2026-11-21",
+      "startTime": "18:00",
+      "isDayOff": false
+    },
+    {
+      "id": "bb6d2f9a-bf24-46ae-aad1-24ff7cc359b4",
+      "staffId": "28a31171-d60b-4ed1-ba40-c1d2fc30bf7d",
+      "date": "2026-11-22",
+      "startTime": "11:30",
+      "isDayOff": false
+    },
+    {
+      "id": "afe35870-e056-4215-8888-d4c14f21627a",
+      "staffId": "c0f20c3f-5307-49f6-be99-b91b0fd50543",
+      "date": "2026-11-22",
+      "startTime": "12:00",
+      "isDayOff": false
+    },
+    {
+      "id": "94a2019a-75a0-4da4-852b-75fb8f2a6d14",
+      "staffId": "d77efae6-82a1-4229-8399-97115ecc142e",
+      "date": "2026-11-22",
+      "startTime": "16:00",
+      "isDayOff": false
+    },
+    {
+      "id": "e05b9dd4-e7d5-4656-8c13-b5c328e59212",
+      "staffId": "b3d4828d-155b-45ee-ab88-ed0f362f0fbf",
+      "date": "2026-11-22",
+      "startTime": "17:30",
+      "isDayOff": false
+    },
+    {
+      "id": "7827eaf2-8883-499e-9ef7-9b3acd14b918",
+      "staffId": "28a31171-d60b-4ed1-ba40-c1d2fc30bf7d",
+      "date": "2026-11-22",
+      "startTime": "18:00",
+      "isDayOff": false
+    },
+    {
+      "id": "dd50b856-bf98-4dda-8d2c-57fdfdc3c466",
+      "staffId": "d77efae6-82a1-4229-8399-97115ecc142e",
+      "date": "2026-11-23",
+      "startTime": "11:00",
+      "isDayOff": false
+    },
+    {
+      "id": "974f8d8e-3f18-4e2f-8a12-da2f189a5c9a",
+      "staffId": "28a31171-d60b-4ed1-ba40-c1d2fc30bf7d",
+      "date": "2026-11-23",
+      "startTime": "11:30",
+      "isDayOff": false
+    },
+    {
+      "id": "96af2f9c-05f4-4ad1-ba62-77c1c9914964",
+      "staffId": "c0f20c3f-5307-49f6-be99-b91b0fd50543",
+      "date": "2026-11-23",
+      "startTime": "12:00",
+      "isDayOff": false
+    },
+    {
+      "id": "cb9735f2-c3a9-4144-bd24-4e2962591276",
+      "staffId": "b3d4828d-155b-45ee-ab88-ed0f362f0fbf",
+      "date": "2026-11-23",
+      "startTime": "17:30",
+      "isDayOff": false
+    }
+  ]
+}

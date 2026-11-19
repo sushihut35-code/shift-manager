@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { createStaff, saveStaff } from "@/lib/local-db";
 import type { StaffDTO } from "@/types";
 
 interface StaffFormDialogProps {
@@ -91,23 +92,16 @@ function StaffFormBody({
 
     setSaving(true);
     try {
-      const res = await fetch(
-        isEdit ? `/api/staff/${staff!.id}` : "/api/staff",
-        {
-          method: isEdit ? "PUT" : "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            name: name.trim(),
-            displayColor,
-            sortOrder,
-            memo: memo.trim() || undefined,
-          }),
-        }
-      );
-      if (!res.ok) {
-        const data = await res.json().catch(() => null);
-        setError(data?.error ?? "保存に失敗しました");
-        return;
+      const data = {
+        name: name.trim(),
+        displayColor,
+        sortOrder,
+        memo: memo.trim() || undefined,
+      };
+      if (isEdit && staff) {
+        saveStaff({ ...staff, ...data });
+      } else {
+        createStaff(data);
       }
       onSaved();
       onOpenChange(false);
