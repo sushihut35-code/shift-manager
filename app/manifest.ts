@@ -11,13 +11,13 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "シフト管理",
     short_name: "シフト",
     description: "週次シフトを管理するアプリ",
-    start_url: "/",
+    start_url: "/shift-manager/",
     display: "standalone",
     background_color: "#f9fafb",
     theme_color: "#2563eb",
     icons: [
       {
-        src: "/icon-512.png",
+        src: "/shift-manager/icon-512.png",
         sizes: "512x512",
         type: "image/png",
         purpose: "any",

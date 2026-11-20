@@ -1,8 +1,7 @@
 // 端末内データ庫（localStorageに全データを保存・kakaku方式）
-// 初回は lib/initial-data.json（Supabaseから引き抜いた移行データ）を種として読み込む
-// 件数が個人文書規模なので全件読み書きで十分軽い
+// 初回は空（公開リポジトリに個人のデータを同梱しないため）。
+// 引っ越し時はスタッフ画面の「読み込み」でバックアップテキストを貼る
 
-import initialData from "@/lib/initial-data.json";
 import type { StaffDTO, ShiftDTO } from "@/types";
 
 const KEY = "shift-manager-data-v1";
@@ -14,7 +13,7 @@ interface DBData {
 
 const nowISO = () => new Date().toISOString();
 
-// 全データ読み込み（localStorage が空なら初期データから複製）
+// 全データ読み込み（localStorage が空なら空データ）
 const read = (): DBData => {
   try {
     const raw = localStorage.getItem(KEY);
@@ -25,12 +24,9 @@ const read = (): DBData => {
       }
     }
   } catch {
-    // 壊れていたら初期データにフォールバック
+    // 壊れていたら空にフォールバック
   }
-  return {
-    staff: (initialData.staff as StaffDTO[]).map((s) => ({ ...s })),
-    shifts: (initialData.shifts as ShiftDTO[]).map((v) => ({ ...v })),
-  };
+  return { staff: [], shifts: [] };
 };
 
 const write = (d: DBData) => {
