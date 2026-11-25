@@ -1,0 +1,1 @@
+{"name":"シフト管理","short_name":"シフト","description":"週次シフトを管理するアプリ","start_url":"/shift-manager/","display":"standalone","background_color":"#f9fafb","theme_color":"#2563eb","icons":[{"src":"/shift-manager/icon-512.png","sizes":"512x512","type":"image/png","purpose":"any"}]}
